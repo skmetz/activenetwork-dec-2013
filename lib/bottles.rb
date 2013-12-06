@@ -1,4 +1,12 @@
+require 'forwardable'
+
 class BottlesSong
+  attr_reader :verse_class, :fragments_class
+  def initialize(verse_class=BeerVerse, fragments_class=BeerVerseFragments)
+    @verse_class = verse_class
+    @fragments_class = fragments_class
+  end
+
   def sing
     verses(99, 0)
   end
@@ -8,14 +16,21 @@ class BottlesSong
   end
 
   def verse(number)
-    BeerVerse.new(number).to_s
+    verse_class.new(fragments_class.for(number)).to_s
   end
 end
 
 class BeerVerse
-  attr_reader :number
-  def initialize(number)
-    @number = number
+  extend Forwardable
+  def_delegators :fragments,
+                     :starting_count, :starting_container,
+                     :action,
+                     :ending_count, :ending_container
+
+  attr_reader :fragments
+
+  def initialize(fragments)
+    @fragments = fragments
   end
 
   def to_s
@@ -25,61 +40,89 @@ class BeerVerse
     "#{ending_count} #{ending_container} of beer on the wall.\n"
   end
 
-  private
+end
+
+class BeerVerseFragments
+
+  def self.for(number)
+    begin
+      Object.const_get("BeerVerseFragments#{number}").new(number)
+    rescue
+      BeerVerseFragments.new(number)
+    end
+  end
+
+  attr_reader :number
+
+  def initialize(number)
+    @number = number
+  end
 
   def starting_count
-    case number
-    when 0
-      'no more'
-    else
-      number
-    end
+    number
   end
 
   def starting_container
-    case number
-    when 1
-      'bottle'
-    else
-      'bottles'
-    end
+    'bottles'
   end
 
   def action
-    case number
-    when 0
-      "Go to the store and buy some more"
-    else
-      "Take #{pronoun} down and pass it around"
-    end
-  end
-
-  def pronoun
-    case number
-    when 1
-      'it'
-    else
-      'one'
-    end
+    "Take #{pronoun} down and pass it around"
   end
 
   def ending_count
-    case number
-    when 0
-      99
-    when 1
-      'no more'
-    else
-      number - 1
-    end
+    number - 1
   end
 
   def ending_container
-    case number
-    when 2
-      'bottle'
-    else
-      'bottles'
-    end
+    'bottles'
   end
+
+  private
+
+  def pronoun
+    'one'
+  end
+end
+
+class BeerVerseFragments0 < BeerVerseFragments
+
+  def starting_count
+    'no more'
+  end
+
+  def action
+    "Go to the store and buy some more"
+  end
+
+  def ending_count
+    99
+  end
+
+end
+
+class BeerVerseFragments1 < BeerVerseFragments
+
+  def starting_container
+    'bottle'
+  end
+
+  def ending_count
+    'no more'
+  end
+
+  private
+
+  def pronoun
+    'it'
+  end
+
+end
+
+class BeerVerseFragments2 < BeerVerseFragments
+
+  def ending_container
+    'bottle'
+  end
+
 end
